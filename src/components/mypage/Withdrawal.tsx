@@ -1,43 +1,69 @@
 import React from 'react';
 import styled from 'styled-components';
-import { PropsType } from './MypageTab';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
+import {
+  userToken,
+  userId,
+  userLogout,
+} from '../../features/kakaoLogin/kakaoLoginSlice';
 
-const Withdrawal = ({
-  popup,
-}: {
-  popup: PropsType['popup'];
-}): JSX.Element | any => {
-  if (popup) {
-    return (
-      <PopupBox>
-        <BackGround />
-        <Popup>
-          <Title>회원탈퇴</Title>
-          <Info>
-            가입된 회원정보가 모두 삭제됩니다. 작성하신 게시물은 삭제되지
-            않습니다. 탈퇴 후 같은 계정으로 재가입 시 기존에 가지고 있던
-            적립금은 복원되지 않으며, 사용 및 다운로드했던 쿠폰도 사용
-            불가능합니다. 회원 탈퇴를 진행하시겠습니까?
-          </Info>
-          <BtnBox>
-            <Btn
-              fontColor="#666"
-              backgroundColor="#fff"
-              padding="11px 26px"
-              onClick={() => {
-                popup;
-              }}
-            >
-              취소
-            </Btn>
-            <Btn fontColor="#fff" backgroundColor="#4286F4" padding="11px 38px">
-              탈퇴하기
-            </Btn>
-          </BtnBox>
-        </Popup>
-      </PopupBox>
-    );
-  }
+interface Prop {
+  togglePop: () => void;
+}
+const Withdrawal = ({ togglePop }: Prop): JSX.Element | any => {
+  const token = useAppSelector(userToken);
+  const userIdValue = useAppSelector(userId);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  const goodbye = () => {
+    axios({
+      method: 'DELETE',
+      url: `http://13.125.151.45:8080/api/user/${userIdValue}`,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }).then((res) => {
+      console.log(res);
+    });
+    togglePop();
+    dispatch(userLogout(false));
+    navigate('/');
+  };
+  return (
+    <PopupBox>
+      <BackGround onClick={togglePop} />
+      <Popup>
+        <Title>회원탈퇴</Title>
+        <Info>
+          가입된 회원정보가 모두 삭제됩니다. 작성하신 게시물은 삭제되지
+          않습니다. 탈퇴 후 같은 계정으로 재가입 시 기존에 가지고 있던 적립금은
+          복원되지 않으며, 사용 및 다운로드했던 쿠폰도 사용 불가능합니다. 회원
+          탈퇴를 진행하시겠습니까?
+        </Info>
+        <BtnBox>
+          <Btn
+            fontColor="#666"
+            backgroundColor="#fff"
+            padding="11px 26px"
+            onClick={togglePop}
+          >
+            취소
+          </Btn>
+          <Btn
+            fontColor="#fff"
+            backgroundColor="#4286F4"
+            padding="11px 38px"
+            onClick={() => goodbye()}
+          >
+            탈퇴하기
+          </Btn>
+        </BtnBox>
+      </Popup>
+    </PopupBox>
+  );
 };
 
 const PopupBox = styled.div`

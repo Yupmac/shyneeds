@@ -1,10 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import styled from 'styled-components';
+import axios from 'axios';
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
+import {
+  // userDataName,
+  // userDataImage,
+  // userDataGender,
+  userUserInfo,
+} from '../../features/userData/userDataSlice';
+import { userToken } from '../../features/kakaoLogin/kakaoLoginSlice';
+import { useNavigate } from 'react-router';
+import { useCookies } from 'react-cookie';
 
 const Modify = () => {
+  const formData = new FormData();
   const now = new Date();
   const year = now.getFullYear();
+  const navigate = useNavigate();
+  const token = useAppSelector<any>(userToken);
+  console.log(token);
   const [selectedDate, setSelectedDate] = useState({
     year: (year + '') as any,
     month: '01' as any,
@@ -20,22 +35,79 @@ const Modify = () => {
     setValue,
     formState: { errors },
   } = useForm();
-  const onSubmit = (data: any) => console.log(data);
+  const onSubmit = (data: any) => {
+    const copyProfileImage = data.profileImage;
+    delete data.password_repeat;
+    delete data.profileImage;
+    console.log(copyProfileImage);
+    console.log(data);
+    formData.append('userInfo', data);
+    formData.append('profileImage', copyProfileImage);
+    axios({
+      method: 'PATCH',
+      url: `http://13.125.151.45:8080/api/user`,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`,
+        // 'Content-type': 'application/json',
+      },
+      data: formData,
+    })
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((errors) => {
+        console.log(errors);
+      });
 
-  const { ref, ...rest } = register('image');
+    alert('회원정보 수정이 완료되었습니다.');
+  };
+
+  const { ref, ...rest } = register('profileImage');
   const uploadImage = (e: any) => {
     setMyImage(URL.createObjectURL(e.target.files[0]));
-    setValue('image', e.target.files[0]);
+    setValue('profileImage', e.target.files[0]);
   };
   const imgRef = useRef<HTMLInputElement | null>(null);
   const passwordRef = useRef<HTMLInputElement | null>(null);
+  // const userName = useAppSelector(userDataName);
+  // const userImage = useAppSelector(userDataImage);
+  // const userGender = useAppSelector(userDataGender);
+  const userInfo = useAppSelector<any>(userUserInfo);
+  const userImg: any = userInfo.profileImage;
 
+  // const modify = () => {};
+
+  // useEffect(() => {
+  //   //only use for Test
+  //   // console.log(selectedDate);
+  //   // console.log(passwordRef.current?.value);
+  // }, [selectedDate]);
   useEffect(() => {
-    //only use for Test
-    console.log(selectedDate);
-    console.log(passwordRef.current?.value);
-  }, [selectedDate]);
-
+    if (userInfo.gender === 'male') {
+      setTab(0);
+    }
+  }, []);
+  const isPhoneNum = () => {
+    if (watch('phoneNumber').length === 13) {
+      setValue(
+        'phoneNumber',
+        watch('phoneNumber').replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')
+      );
+    }
+    if (watch('phoneNumber') >= 13) {
+      setValue(
+        'phoneNumber',
+        watch('phoneNumber')
+          .replace(/-/g, '')
+          .replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3')
+      );
+    }
+  };
+  const isError = () => {
+    Object.keys(errors).length === 0 && alert('회원가입이 완료되었습니다.'),
+      navigate(-1);
+  };
   return (
     <div>
       <h2>회원정보수정</h2>
@@ -44,9 +116,9 @@ const Modify = () => {
           <InputImgBox>
             <ImgButton
               src={
-                imgRef.current
-                  ? myImage
-                  : process.env.PUBLIC_URL + '/icons/ic-member.svg'
+                userImg.includes('null')
+                  ? process.env.PUBLIC_URL + '/icons/ic-member.svg'
+                  : userImg
               }
               onClick={() => imgRef.current?.click()}
             />
@@ -59,24 +131,14 @@ const Modify = () => {
               accept="image/*"
             />
           </InputImgBox>
-          <NameStyle>이메일</NameStyle>
+
           <InputBox>
-            <InputStyle
-              type="text"
-              placeholder="이메일"
-              style={{
-                outline: errors.email ? '2px solid red' : '',
-              }}
-              {...register('email', { required: true, pattern: /^\S+@\S+$/i })}
-            />
-            {errors.email && <ErrorMessage>이메일 확인</ErrorMessage>}
-          </InputBox>
-          <InputBox>
-            <NameStyle>비밀번호</NameStyle>
+            <NameStyle>새로운 비밀번호</NameStyle>
             <InputStyle
               type="password"
               placeholder="비밀번호"
               {...register('password', {
+                onChange: () => isPhoneNum(),
                 required: true,
                 pattern: /^(?=.*[a-zA-Z])(?=.*[!@#$%^*+=-])(?=.*[0-9]).{8,25}$/,
               })}
@@ -107,8 +169,9 @@ const Modify = () => {
           <InputBox>
             <NameStyle>이름</NameStyle>
             <InputStyle
+              defaultValue={userInfo.name}
               placeholder="이름"
-              style={{ outline: errors.email ? '2px solid red' : '' }}
+              style={{ outline: errors.name ? '2px solid red' : '' }}
               {...register('name', {
                 required: true,
                 minLength: 2,
@@ -118,9 +181,25 @@ const Modify = () => {
             {errors.name && <ErrorMessage>이름을 입력해주세요.</ErrorMessage>}
           </InputBox>
           <InputBox>
+            <NameStyle>연락처</NameStyle>
+            <InputStyle
+              placeholder="연락처를 적어주세요"
+              style={{ outline: errors.phoneNumber ? '2px solid red' : '' }}
+              {...register('phoneNumber', {
+                required: true,
+                pattern: /^01([0|1|6|7|8|9]?)-?([0-9]{3,4})-?([0-9]{4})$/,
+                onChange: () => isPhoneNum(),
+              })}
+            />
+            {errors.phoneNumber && (
+              <ErrorMessage>번호를 입력해주세요.</ErrorMessage>
+            )}
+          </InputBox>
+          <InputBox>
             <NameStyle>생년월일</NameStyle>
             <BirthdayBox>
               <BirthSelect
+                defaultValue={userInfo.birthday.substr(0, 4)}
                 {...register('year', { required: true })}
                 onChange={(e) =>
                   setSelectedDate({ ...selectedDate, year: e.target.value })
@@ -133,6 +212,7 @@ const Modify = () => {
                 ))}
               </BirthSelect>
               <BirthSelect
+                defaultValue={userInfo.birthday.substr(5, 7)}
                 {...register('month', { required: true })}
                 onChange={(e) =>
                   setSelectedDate({ ...selectedDate, month: e.target.value })
@@ -145,6 +225,7 @@ const Modify = () => {
                 ))}
               </BirthSelect>
               <BirthSelect
+                defaultValue={userInfo.birthday.substr(8, 10)}
                 {...register('day', { required: true })}
                 onChange={(e) =>
                   setSelectedDate({ ...selectedDate, day: e.target.value })
@@ -167,7 +248,8 @@ const Modify = () => {
             <NameStyle>성별</NameStyle>
             <GednerBox>
               <GenderButton
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   setTab(0), setValue('gender', 'male');
                 }}
                 className={tab === 0 ? 'active' : undefined}
@@ -175,7 +257,8 @@ const Modify = () => {
                 남성
               </GenderButton>
               <GenderButton
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   setTab(1), setValue('gender', 'female');
                 }}
                 className={tab === 1 ? 'active' : undefined}

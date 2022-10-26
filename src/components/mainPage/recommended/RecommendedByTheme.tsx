@@ -11,7 +11,7 @@ import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import {
   getThemeProductData,
   themeData,
-} from '../../../features/main/themeSlice';
+} from '../../../features/main/productSlice';
 import { useEffect } from 'react';
 import { ResponseType } from '../../.././utils/ResponseType';
 
@@ -30,7 +30,6 @@ export const RecommendedByTheme = () => {
       });
       const mainData = res.data.data;
       const themeData = mainData.mainCategoryPackageList.테마별상품;
-      console.log('완료', themeData);
       dispatch(getThemeProductData(themeData));
       return themeData;
     } catch (e) {
@@ -49,7 +48,7 @@ export const RecommendedByTheme = () => {
       </RecommendedListTitle>
       <CarouselContainer {...settings}>
         {products.map((data: any) => (
-          <Link to={'detail/' + data.id} key={data.id}>
+          <Link to={'offers/' + data.id} key={data.id}>
             <ProductWrap>
               <img src={data.imageUrl} alt="product_image" />
               <ProductText>
@@ -71,7 +70,8 @@ export const RecommendedByTheme = () => {
 
 const RecommendedListContainer = styled.div`
   width: ${LAYOUT.SIZE.WIDTH};
-  margin: 80px auto;
+  margin: 56px auto;
+  padding: 8px;
 
   .slick-slider {
     margin: 0 -10px;
@@ -95,7 +95,7 @@ const CarouselContainer = styled(Slider)`
     height: 40px;
     margin-left: 10px;
     margin-right: 10px;
-    z-index: 99999;
+    z-index: 2;
     top: 52%;
   }
   .slick-next::before,
@@ -115,6 +115,15 @@ const ProductWrap = styled.div`
   border: 1px solid #cccccc;
   overflow: hidden;
   position: relative;
+  margin: 5px 0;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    cursor: pointer;
+    box-shadow: 1px 2px 5px 3px #f0f0f0;
+    transform: translate3d(0px, -3px, 0px);
+    transition: all 0.15s ease-in;
+  }
 
   .wish-icon {
     position: absolute;

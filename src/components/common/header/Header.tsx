@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useCookies } from 'react-cookie';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAppSelector } from '../../../app/hooks';
@@ -9,12 +10,43 @@ import { Navbar } from './Navbar';
 import { LogInView, LogOutView } from './UserMenu';
 
 const Header = () => {
-  const [isClose, setIsClose] = useState(true);
   const userAuthenticated = useAppSelector(authenticated);
+  const [openBanner, setOpenBanner] = useState<boolean>(true);
+  const [hasCookies, setHasCookies] = useState<boolean>(true);
+  const [appCookies, setAppCookies] = useCookies<string>([]);
+
+  const getExpiredData = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date;
+  };
+
+  const closeBannerUntilExpires = () => {
+    if (!appCookies) return;
+
+    const expires = getExpiredData(1);
+    setAppCookies('HEADER_BANNER_EXPIRES', true, { path: '/', expires });
+
+    setOpenBanner(false);
+  };
+
+  useEffect(() => {
+    if (appCookies['HEADER_BANNER_EXPIRES']) return;
+    console.log(appCookies['HEADER_BANNER_EXPIRES']);
+    setHasCookies(false);
+  }, []);
 
   return (
     <>
-      <>{isClose && <HeaderBanner onClose={setIsClose} />}</>
+      <>
+        {/* 작업 편의를 위한 주석 처리 */}
+        {/* {openBanner && !hasCookies && (
+          <HeaderBanner
+            closeBanner={() => setOpenBanner(false)}
+            closeBannerUntilExpires={closeBannerUntilExpires}
+          />
+        )} */}
+      </>
 
       <Container>
         <Wrapper>
@@ -40,8 +72,8 @@ const Header = () => {
             {userAuthenticated ? <LogOutView /> : <LogInView />}
           </UserMenu>
         </Wrapper>
+        <Navbar />
       </Container>
-      <Navbar />
     </>
   );
 };
@@ -49,8 +81,7 @@ const Header = () => {
 export default Header;
 
 const Container = styled.div`
-  // width: 1920px;
-  // position: fixed;
+  z-index: 999;
 `;
 
 const Wrapper = styled.div`

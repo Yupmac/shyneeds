@@ -10,7 +10,7 @@ import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import {
   getGroupProductData,
   groupData,
-} from '../../../features/main/groupSlice';
+} from '../../../features/main/productSlice';
 import { useEffect } from 'react';
 import { ResponseType } from '../../../utils/ResponseType';
 
@@ -31,7 +31,6 @@ export const GroupProductCarousel = () => {
       .then((res) => {
         const mainData = res.data.data;
         const groupData = mainData.mainCategoryPackageList.그룹별상품;
-        console.log('완료', groupData);
         dispatch(getGroupProductData(groupData));
         return groupData;
       })
@@ -75,7 +74,7 @@ const CarouselContainer = styled(Slider)`
     height: 40px;
     margin-left: 10px;
     margin-right: 10px;
-    z-index: 99999;
+    z-index: 2;
   }
   .slick-next::before,
   .slick-prev::before {
@@ -110,9 +109,8 @@ const ProductWrap = styled.div`
     box-shadow: 1px 2px 5px 3px #f0f0f0;
     transform: translate3d(0px, -3px, 0px);
     transition: all 0.15s ease-in;
-    cursor: pointer;
   }
-  
+
   .wish-icon {
     position: absolute;
     top: 10px;

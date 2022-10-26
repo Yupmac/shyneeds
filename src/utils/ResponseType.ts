@@ -1,10 +1,18 @@
 export interface ResponseType {
   data: {
-    bestReviewList: string[];
+    bestReviewList: {
+      author: string;
+      contents: string;
+      id: number;
+      mainImage: string;
+      title: string;
+      updatedAt: string;
+    };
     mainBannerList: {
       id: number;
       imageUrl: string;
       keyword: string;
+      price: string;
       title: string;
     };
     mainCategoryPackageList: {
@@ -54,6 +62,17 @@ export interface ResponseType {
         title: string;
       };
       테마별상품: [
+        {
+          id: number;
+          imageUrl: string;
+          keyword: string;
+          price: string;
+          summary: string;
+          tag: string;
+          title: string;
+        }
+      ];
+      기획전상품: [
         {
           id: number;
           imageUrl: string;
