@@ -261,7 +261,6 @@ export const Navbar = () => {
                           <Link to="/subPage_theme">성지순례</Link>
                         </SubLi_first>
                       </SubBox>
-
                       <SubBox>
                         <SubLi_first>
                           <Link to="/subPage_theme">볼론투어</Link>
