@@ -1,42 +1,95 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { getOfferData } from './Offers_Type';
+import {
+  getProductData,
+  packageOptionResponseDtoType,
+} from '../common/Product_Type';
 import { useAppSelector, useAppDispatch } from '../../app/hooks';
 import {
-  productId,
-  productPrice,
+  addProduct,
+  setProductIds,
+  setProductImage,
+  setProductTitle,
+  setTotalPrice,
   minusNum,
   plusNum,
   reservationProductNum,
+  reservationInfo,
+  reservationPayInfo,
+  reservationPackageType,
 } from '../../features/userReservation/userReservationSlice';
+import { productId } from '../../features/main/productSlice';
 import { useNavigate } from 'react-router';
 
+type offerData = {
+  relatedPackageList: getProductData[];
+  travelPackageResponseDto: getProductData;
+};
+
 export default function Offers_Header() {
-  const [datas, setDatas] = useState<getOfferData | null>(null);
-  const [option, setOption] = useState<number | null>(0);
+  const [datas, setDatas] = useState<offerData>();
+  const [options, setOptions] = useState<reservationPackageType[]>([]);
   const [clicked, setClicked] = useState<boolean | null>(false);
-  const productNum = useAppSelector(reservationProductNum);
+  const emptyOption = useRef<reservationPackageType[]>([]);
+  const optionsName = useRef<string[]>([]);
+  const optionsPrice = useRef<number>(0);
+  const isLoaded = useRef<boolean>(false);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const productNum = useAppSelector(reservationProductNum);
+  const id = localStorage.getItem('WATCHED_PRODUCTS');
   useEffect(() => {
     axios({
       method: 'get',
-      url: 'http://13.125.151.45:8080/api/package/admin/2',
+      url: `http://13.125.151.45:8080/api/package/${id}`,
       headers: {
         Authorization:
-          'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbjEwMEBnbWFpbC5jb20iLCJhdXRoIjoiQURNSU4iLCJleHAiOjE4MjMxNTg5MTF9.XHWNGrugeIW1gYvVme_lDfcRQ6g0qriLqOfMTi592RY',
+          'Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbjAwMDBAZ21haWwuY29tIiwicm9sZSI6IkFETUlOIiwiZXhwIjoxOTgxMzcwMTAyfQ.85ucBpU6BU7KbXYOOAl1-GdBYTn117SVu5rtTiUQPts',
       },
     }).then((res) => {
       setDatas(res.data.data);
+      if (!isLoaded.current) {
+        for (const [key] of Object.entries(
+          res.data.data.travelPackageResponseDto.packageOptionResponseDto
+        )) {
+          optionsName.current.push(`${key}`);
+        }
+        isLoaded.current = !isLoaded.current;
+      }
+      dispatch(setProductIds(id));
     });
   }, []);
+
+  useEffect(() => {
+    optionsPrice.current = 0;
+    options.map((option) => {
+      optionsPrice.current += Number(option.price.replace(/,/g, ''));
+    });
+  }, [options]);
+
+  useEffect(() => {
+    emptyOption.current.push({
+      optionFlg: null,
+      optionValue: null,
+      price: (
+        (optionsPrice.current +
+          Number(datas?.travelPackageResponseDto?.price.replace(/,/g, ''))) *
+        productNum
+      )
+        .toString()
+        .replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ','),
+      quantity: productNum,
+      optionTitle: null,
+      travelPackageId: Number(id),
+    });
+  }, [productNum]);
 
   return (
     <>
       <ProductWrap>
         <Product_Img
-          src={process.env.PUBLIC_URL + '/icons/3-sub-banner-1920x960.png'}
+          src={datas?.travelPackageResponseDto.mainImage}
         ></Product_Img>
         <InfoWrap>
           <Info>
@@ -44,9 +97,9 @@ export default function Offers_Header() {
               onClick={() => {
                 if (navigator.share) {
                   navigator.share({
-                    title: datas?.title,
-                    text: datas?.summary,
-                    url: 'http://localhost:3000/offers',
+                    title: datas?.travelPackageResponseDto.title,
+                    text: datas?.travelPackageResponseDto.summary,
+                    url: `http://localhost:3000/offers/${productId}`,
                   });
                 } else {
                   alert('공유하기가 지원되지 않는 환경 입니다.');
@@ -55,36 +108,154 @@ export default function Offers_Header() {
             >
               <img src={process.env.PUBLIC_URL + '/icons/share-icon.png'} />
             </Product_Share>
-            <Product_Name>여자끼리 파타고니아</Product_Name>
-            <Product_Price>{datas?.price}원</Product_Price>
-            <Product_Summary>{datas?.summary}</Product_Summary>
-            <Product_Area>그리스</Product_Area>
-            <Product_Feature>포함투어 10개</Product_Feature>
-            <Product_Airplane>{datas?.flightInfo}</Product_Airplane>
-            <Product_Option onChange={(e) => setOption(Number(e.target.value))}>
-              <p>필수</p>
-              <option value="100000">100000원</option>
-              <option value="200000">200000원</option>
-            </Product_Option>
-            <Product_Option>
-              <p>필수</p>
-              <option value="50000">50000원</option>
-              <option value="300000">300000원</option>
-            </Product_Option>
+            <Product_Name>{datas?.travelPackageResponseDto.title}</Product_Name>
+            <Product_Price>
+              {datas?.travelPackageResponseDto?.price.replace(
+                /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
+                ','
+              )}
+              원
+            </Product_Price>
+            <Product_Summary>
+              {datas?.travelPackageResponseDto.summary}
+            </Product_Summary>
+            <Product_Option_Wrap>
+              {optionsName.current.map((optionName, i) => (
+                <Product_Option key={optionName}>
+                  {datas?.travelPackageResponseDto.packageOptionResponseDto[
+                    `${optionName}`
+                  ][0].optionFlg
+                    ? optionName.replaceAll("'", '') + '(필수)'
+                    : optionName.replaceAll("'", '') + '(선택)'}
+                  {optionsName.current.map((name: string, j) =>
+                    i === j ? (
+                      <Product_Option_Select
+                        key={name}
+                        onChange={(e) => {
+                          for (
+                            let i = 0;
+                            i <
+                            datas?.travelPackageResponseDto
+                              .packageOptionResponseDto[`${name}`].length;
+                            i++
+                          ) {
+                            if (
+                              datas?.travelPackageResponseDto
+                                .packageOptionResponseDto[`${name}`][i]
+                                .optionValue === e.target.value &&
+                              !options.find(
+                                (option) =>
+                                  option.optionValue === e.target.value
+                              )
+                            ) {
+                              setOptions([
+                                ...options,
+                                {
+                                  optionFlg:
+                                    datas?.travelPackageResponseDto
+                                      .packageOptionResponseDto[`${name}`][i]
+                                      .optionFlg,
+                                  optionValue: e.target.value.replaceAll(
+                                    '[^a-zA-Z]',
+                                    ''
+                                  ),
+                                  price: Number(
+                                    datas?.travelPackageResponseDto
+                                      .packageOptionResponseDto[`${name}`][i]
+                                      .price
+                                  )
+                                    .toString()
+                                    .replace(
+                                      /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
+                                      ','
+                                    ),
+                                  quantity: 0,
+                                  optionTitle:
+                                    datas?.travelPackageResponseDto.packageOptionResponseDto[
+                                      `${name}`
+                                    ][i].title.replaceAll("'", ''),
+                                  travelPackageId:
+                                    datas?.travelPackageResponseDto
+                                      .packageOptionResponseDto[`${name}`][i]
+                                      .id,
+                                },
+                              ]);
+                            }
+                          }
+                        }}
+                      >
+                        {datas?.travelPackageResponseDto.packageOptionResponseDto[
+                          `${name}`
+                        ].map((option: packageOptionResponseDtoType) => (
+                          <option key={option.id} value={option.optionValue}>
+                            {option.optionValue.replaceAll('[^a-zA-Z]', '')}
+                            {'       '}
+                            {Number(option.price) === 0
+                              ? null
+                              : '(+' +
+                                Number(option.price)
+                                  .toString()
+                                  .replace(
+                                    /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
+                                    ','
+                                  ) +
+                                '원)'}
+                          </option>
+                        ))}
+                      </Product_Option_Select>
+                    ) : (
+                      false
+                    )
+                  )}
+                </Product_Option>
+              ))}
+            </Product_Option_Wrap>
             <PriceWrap>
               <Product_Num>
-                <People_Num_Text>{option}</People_Num_Text>
+                <People_Option>
+                  <People_Option_Title>
+                    {options.map((option) => (
+                      <p key={option.optionValue}>{option.optionValue}</p>
+                    ))}
+                  </People_Option_Title>
+                  <People_Option_Btn>
+                    {options.map((option, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setOptions([
+                            ...options.filter((opt) => opt !== option),
+                          ]);
+                        }}
+                      >
+                        x
+                      </button>
+                    ))}
+                  </People_Option_Btn>
+                </People_Option>
                 <People_Num>
-                  <Num_Plus onClick={() => dispatch(minusNum())}>-</Num_Plus>
+                  <Num_Minus
+                    onClick={() => {
+                      dispatch(minusNum());
+                    }}
+                  >
+                    -
+                  </Num_Minus>
                   <Num_Value>{productNum}</Num_Value>
-                  <Num_Minus onClick={() => dispatch(plusNum())}>+</Num_Minus>
+                  <Num_Plus onClick={() => dispatch(plusNum())}>+</Num_Plus>
                 </People_Num>
               </Product_Num>
               <PriceWrap_Line></PriceWrap_Line>
               <Product_Total_Price>
                 <Price_Text>총 상품 금액</Price_Text>
                 <Total_Price>
-                  {(Number(datas?.price.replace(/,/g, '')) * productNum)
+                  {(
+                    (optionsPrice.current +
+                      Number(
+                        datas?.travelPackageResponseDto?.price.replace(/,/g, '')
+                      )) *
+                    productNum
+                  )
                     .toString()
                     .replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ',')}
                   원
@@ -94,20 +265,93 @@ export default function Offers_Header() {
             <ButtonWrap>
               <Button_Reservation
                 onClick={() => {
-                  datas ? dispatch(productId(datas?.mainImage)) : '';
-                  datas
-                    ? dispatch(
-                        productPrice(
-                          Number(datas?.price.replace(/,/g, '')) * productNum
+                  if (productNum > 0) {
+                    datas ? dispatch(addProduct()) : '';
+                    datas
+                      ? dispatch(
+                          setProductImage(
+                            datas.travelPackageResponseDto.mainImage
+                          )
                         )
-                      )
-                    : '';
-                  navigate('/reservation');
+                      : '';
+                    datas
+                      ? dispatch(
+                          setProductTitle(datas.travelPackageResponseDto.title)
+                        )
+                      : '';
+                    datas
+                      ? dispatch(
+                          setTotalPrice(
+                            (
+                              (optionsPrice.current +
+                                Number(
+                                  datas?.travelPackageResponseDto?.price.replace(
+                                    /,/g,
+                                    ''
+                                  )
+                                )) *
+                              productNum
+                            )
+                              .toString()
+                              .replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ',')
+                          )
+                        )
+                      : '';
+                    datas && options.length > 0
+                      ? dispatch(reservationInfo(options))
+                      : dispatch(reservationInfo(emptyOption.current));
+                    navigate('/reservation');
+                    datas ? dispatch(reservationPayInfo(-1)) : '';
+                  } else {
+                    alert('인원이 0명입니다.');
+                  }
                 }}
               >
                 <p>예약하기</p>
               </Button_Reservation>
-              <Button_Cart onClick={() => navigate('/cart')}>
+              <Button_Cart
+                onClick={() => {
+                  if (productNum > 0) {
+                    datas ? dispatch(addProduct()) : '';
+                    datas
+                      ? dispatch(
+                          setProductImage(
+                            datas.travelPackageResponseDto.mainImage
+                          )
+                        )
+                      : '';
+                    datas
+                      ? dispatch(
+                          setProductTitle(datas.travelPackageResponseDto.title)
+                        )
+                      : '';
+                    datas
+                      ? dispatch(
+                          setTotalPrice(
+                            (
+                              (optionsPrice.current +
+                                Number(
+                                  datas?.travelPackageResponseDto?.price.replace(
+                                    /,/g,
+                                    ''
+                                  )
+                                )) *
+                              productNum
+                            )
+                              .toString()
+                              .replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ',')
+                          )
+                        )
+                      : '';
+                    datas && options.length > 0
+                      ? dispatch(reservationInfo(options))
+                      : dispatch(reservationInfo(emptyOption.current));
+                    navigate('/cart');
+                  } else {
+                    alert('인원이 0명입니다.');
+                  }
+                }}
+              >
                 <p>장바구니</p>
               </Button_Cart>
             </ButtonWrap>
@@ -115,7 +359,9 @@ export default function Offers_Header() {
         </InfoWrap>
       </ProductWrap>
       <OfferImgWrap className={clicked ? 'clicked' : 'unclicked'}>
-        <Offer_Img src={datas?.descriptionImage[0]}></Offer_Img>
+        <Offer_Img
+          src={datas?.travelPackageResponseDto.descriptionImage[0]}
+        ></Offer_Img>
       </OfferImgWrap>
       <OfferBtnWrap>
         <Offer_Btn
@@ -137,6 +383,7 @@ const ProductWrap = styled.section`
 const Product_Img = styled.img`
   width: 100%;
   heigth: 100%;
+  object-fit: cover;
 `;
 const InfoWrap = styled.div`
   display: flex;
@@ -184,17 +431,15 @@ const Product_Summary = styled.p`
   width: 70%;
   margin-top: 20px;
 `;
-const Product_Area = styled.p`
+const Product_Option_Wrap = styled.section``;
+const Product_Option = styled.section`
   font-family: 'Pretendard';
   font-style: normal;
-  font-weight: 500;
-  font-size: 20px;
+  font-weight: 600;
+  font-size: 16px;
   line-height: 34px;
-  margin-top: 20px;
 `;
-const Product_Feature = styled.p``;
-const Product_Airplane = styled.p``;
-const Product_Option = styled.select`
+const Product_Option_Select = styled.select`
   font-family: 'Pretendard';
   font-style: normal;
   font-weight: 500;
@@ -231,20 +476,44 @@ const PriceWrap = styled.section`
   border: 1px solid #cccccc;
 `;
 const Product_Num = styled.div`
+  position: relative;
   height: 50%;
   display: flex;
-  position: relative;
+  overflow-y: auto;
   align-items: center;
 `;
-const People_Num_Text = styled.p`
+const People_Option = styled.section`
   position: absolute;
   left: 20px;
-  font-family: 'Pretendard';
-  font-style: normal;
-  font-weight: 500;
-  font-size: 15px;
-  line-height: 20px;
+  height: 100%;
 `;
+const People_Option_Title = styled.section`
+  position: absolute;
+  flex-direction: column;
+  p {
+    display: flex;
+    align-items: center;
+    font-family: 'Pretendard';
+    font-style: normal;
+    font-weight: 500;
+    font-size: 13px;
+    height: 25px;
+    width: 100px;
+  }
+`;
+const People_Option_Btn = styled.section`
+  position: absolute;
+  left: 100px;
+  flex-direction: column;
+  button {
+    display: flex;
+    align-items: center;
+    font-size: 15px;
+    height: 25px;
+    cursor: pointer;
+  }
+`;
+
 const People_Num = styled.div`
   position: absolute;
   right: 20px;

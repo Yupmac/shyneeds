@@ -9,9 +9,10 @@ import { API_URL } from '../../../constants/API_URL';
 import { useAppDispatch, useAppSelector } from '../../../app/hooks';
 import {
   getGroupProductData,
+  getProductIdData,
   groupData,
-} from '../../../features/main/groupSlice';
-import { useEffect } from 'react';
+} from '../../../features/main/productSlice';
+import { useEffect, useState } from 'react';
 import { ResponseType } from '../../../utils/ResponseType';
 
 const settings = {
@@ -21,6 +22,7 @@ const settings = {
 };
 
 export const GroupProductCarousel = () => {
+  const [checked, setChecked] = useState<boolean>(false);
   const dispatch = useAppDispatch();
   const products = useAppSelector(groupData);
   const getGroupData: any = () => {
@@ -31,7 +33,6 @@ export const GroupProductCarousel = () => {
       .then((res) => {
         const mainData = res.data.data;
         const groupData = mainData.mainCategoryPackageList.그룹별상품;
-        console.log('완료', groupData);
         dispatch(getGroupProductData(groupData));
         return groupData;
       })
@@ -49,7 +50,15 @@ export const GroupProductCarousel = () => {
       {products.map((data: any) => (
         <Link to={'offers/' + data.id} key={data.id}>
           <CardContainer>
-            <ProductWrap key={data.id}>
+            <ProductWrap
+              key={data.id}
+              onClick={() =>
+                window.localStorage.setItem(
+                  'WATCHED_PRODUCTS',
+                  JSON.stringify(data.id)
+                )
+              }
+            >
               <ProductImg src={data.imageUrl} alt="product_image" />
               <ProductText>
                 <Title>{data.title}</Title>
@@ -59,7 +68,25 @@ export const GroupProductCarousel = () => {
               <ProductTag>
                 <TagTitle>{data.keyword}</TagTitle>
               </ProductTag>
-              <IoMdHeartEmpty size="20px" className="wish-icon" />
+              {checked === false ? (
+                <WishIcon
+                  onClick={() => {
+                    setChecked(true);
+                  }}
+                >
+                  <img
+                    src={process.env.PUBLIC_URL + '/icons/EmptyLoveIcon.svg'}
+                  />
+                </WishIcon>
+              ) : (
+                <WishIcon
+                  onClick={() => {
+                    setChecked(false);
+                  }}
+                >
+                  <img src={process.env.PUBLIC_URL + '/icons/LoveIcon.svg'} />
+                </WishIcon>
+              )}
             </ProductWrap>
           </CardContainer>
         </Link>
@@ -75,7 +102,7 @@ const CarouselContainer = styled(Slider)`
     height: 40px;
     margin-left: 10px;
     margin-right: 10px;
-    z-index: 99999;
+    z-index: 2;
   }
   .slick-next::before,
   .slick-prev::before {
@@ -110,7 +137,6 @@ const ProductWrap = styled.div`
     box-shadow: 1px 2px 5px 3px #f0f0f0;
     transform: translate3d(0px, -3px, 0px);
     transition: all 0.15s ease-in;
-    cursor: pointer;
   }
   
   .wish-icon {
@@ -169,4 +195,11 @@ const ProductTag = styled.div`
 
 const TagTitle = styled.p`
   font-size: 0.8rem;
+`;
+
+const WishIcon = styled.div`
+  width: 20px;
+  position: absolute;
+  top: 19px;
+  right: 20px;
 `;

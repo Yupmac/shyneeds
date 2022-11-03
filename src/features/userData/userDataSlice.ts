@@ -1,47 +1,65 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import axios from 'axios';
 import { RootState } from '../../app/store';
 
+export const getUserData = createAsyncThunk(
+  'GET_USER_DATA',
+  async (token: string, thunkAPI) => {
+    return await axios({
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      url: `http://13.125.151.45:8080/api/my/user`,
+      method: 'get',
+    })
+      .then((response) => {
+        // console.log(response.data.data.reservationList);
+        // thunkAPI.dispatch(reservationList(response.data.data.reservationList));
+        return response.data.data.reservationList;
+      })
+      .catch((error) => {
+        console.log({ error });
+      });
+  }
+);
+
 export interface userDataList {
-  userInfo: [
-    {
-      email: string;
-      name: string;
-      birthday: string;
-      gender: string;
-      profileImage: string;
-    }
-  ];
+  userInfo: Array<object>;
+  reservationList: Array<object>;
+  cancelNum: number;
 }
 
 const initialState: userDataList = {
-  userInfo: [
-    {
-      email: '',
-      name: '',
-      birthday: '',
-      gender: '',
-      profileImage: '',
-    },
-  ],
+  userInfo: [],
+  reservationList: [],
+  cancelNum: 0,
 };
 
 export const userDataSlice = createSlice({
   name: 'userData',
   initialState,
   reducers: {
-    email: (state, action: PayloadAction<string>) => {
-      state.userInfo[0].email = action.payload;
-      // console.log('이메일:' + state.userInfo[0].email);
+    userInfo: (state, action: PayloadAction<Array<object>>) => {
+      state.userInfo = action.payload;
     },
-    name: (state, action: PayloadAction<string>) => {
-      state.userInfo[0].name = action.payload;
+    reservationList: (state, action: PayloadAction<Array<object>>) => {
+      state.reservationList = action.payload;
     },
+    cancelNum: (state, action: PayloadAction<number>) => {
+      state.cancelNum = action.payload;
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(getUserData.fulfilled, (state, action) => {
+      state.reservationList = action.payload;
+    });
   },
 });
 
-export const { email, name } = userDataSlice.actions;
-export const userDataEmail = (state: RootState) =>
-  state.userData.userInfo[0].email;
-export const userDataName = (state: RootState) =>
-  state.userData.userInfo[0].name;
+export const { userInfo, reservationList, cancelNum } = userDataSlice.actions;
+export const userUserInfo = (state: RootState) => state.userData.userInfo;
+export const userReservationList = (state: RootState) =>
+  state.userData.reservationList;
+export const userCancelNum = (state: RootState) => state.userData.cancelNum;
 export default userDataSlice.reducer;
